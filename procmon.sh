@@ -5,7 +5,7 @@
 #
 #   Sample cron job:
 #
-#     */10 * * * * /usr/local/bin/procmon
+#     */10 * * * * /usr/local/bin/procmon.sh
 #
 #   Custom logrotate config (/etc/logrotate.d/custom-logs):
 #
