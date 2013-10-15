@@ -29,16 +29,36 @@ TIME=$(date '+%b %e\ %T')
 psargs="-eo"
 pssort="--sort -%cpu,-%mem"
 fmt="user,pid,ppid,stat,size,rss,vsz,%cpu,%mem,stime,etime,time,cmd"
+psheader=$(ps ${psargs} ${fmt}  | head -n 1 | sed 's/^/TIMESTAMP\t/')
+lsofheader=$(lsof -p 1 | head -n 1 | sed 's/^/TIMESTAMP\t/')
 
-[[ ! -f $LOG_FILE ]] && ps ${psargs} ${fmt}  | head -n 1 | sed 's/^/TIMESTAMP\t/' >> $LOG_FILE
-ps ${psargs} ${fmt} ${pssort} | grep -v USER | sed "s/^/$TIME\ /g" >> $LOG_FILE
+getproclist() {
+    ps ${psargs} ${fmt} ${pssort} | grep -v USER | sed "s/^/$TIME\ /g"
+}
+
+getlsoflist() {
+    lsof -nP -p ${p} | grep -v USER | sed "s/^/$TIME\ /g"
+}
+
+if [[ "$1" = "--nolog" ]] ; then
+    echo "${psheader}"
+    if [[ -n "$2" ]] ; then
+        getproclist | head -n $2
+    else
+        getproclist
+    fi
+    exit 0
+fi
+
+[[ ! -f $LOG_FILE ]] && echo "${psheader}" >> $LOG_FILE
+getproclist >> $LOG_FILE
 
 if [[ "$1" = "--lsof" ]] ; then
-        pids=$(grep "${TIME}" $LOG_FILE | awk '($7 ~ /D/) {print $5}')
-        if [[ -n ${pids} ]] ; then
-                [[ ! -f $LSOF_FILE ]] && lsof -p 1 | head -n 1 | sed 's/^/TIMESTAMP\t/' >> $LSOF_FILE
-                for p in $(echo "${pids}") ; do
-                        lsof -nP -p ${p} | grep -v USER | sed "s/^/$TIME\ /g" >> $LSOF_FILE
-                done
-        fi
+    pids=$(grep "${TIME}" $LOG_FILE | awk '($7 ~ /D/) {print $5}')
+    if [[ -n ${pids} ]] ; then
+        [[ ! -f $LSOF_FILE ]] && echo "${lsofheader}"  >> $LSOF_FILE
+        for p in $(echo "${pids}") ; do
+            getlsoflist >> $LSOF_FILE
+        done
+    fi
 fi
